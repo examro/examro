@@ -6,8 +6,8 @@ let currentExamQuestions = [];
 let userAnswers = [];
 
 // Queue System for Questions
-let questionQueue = []; // Holds indices of questions to visit [0, 1, 2, ...]
-let queuePosition = 0;  // Current pointer in the queue
+let questionQueue = [];
+let queuePosition = 0;
 
 let totalTimeSeconds = 0;
 let timeRemaining = 0;
@@ -28,8 +28,7 @@ const questionText = document.getElementById('question-text');
 const optionsContainer = document.getElementById('options-container');
 const nextBtn = document.getElementById('next-btn');
 const prevBtn = document.getElementById('prev-btn');
-const finishBtn = document.getElementById('finish-btn');
-const finishBtnTop = document.getElementById('finish-btn-top');
+const finishBtnMain = document.getElementById('finish-btn-main'); // NEW BUTTON ID
 
 const currentQNum = document.getElementById('current-q-num');
 const totalQNum = document.getElementById('final-total'); 
@@ -55,7 +54,6 @@ async function loadSubjectMenu() {
         subjectSelect.addEventListener('change', handleSubjectSelection);
     } catch (e) {
         console.warn("Server mode not detected. Enabling Demo Mode.");
-        // Demo Data for testing without server
         subjectList = [{name: "General Knowledge (Demo)", folder: "demo"}];
         subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
         subjectSelect.appendChild(new Option("General Knowledge (Demo)", "demo"));
@@ -77,7 +75,6 @@ async function handleSubjectSelection() {
         availableChapters = await res.json();
         generateChapterList();
     } catch (e) {
-        // Fallback for Demo
         availableChapters = [
             {file: "ch1.json", name: "Chapter 1: Basics"},
             {file: "ch2.json", name: "Chapter 2: Advanced"}
@@ -94,7 +91,6 @@ function generateChapterList() {
             <input type="checkbox" id="ch-${chap.file}" value="${chap.file}" class="chapter-checkbox">
             <label for="ch-${chap.file}">${chap.name}</label>
         `;
-        // Allow clicking row to toggle checkbox
         div.addEventListener('click', (e) => {
             if(e.target.tagName !== 'INPUT') {
                 const cb = div.querySelector('input');
@@ -125,32 +121,26 @@ async function startExam() {
     
     try {
         let allQuestions = [];
-        
-        // Try fetching real data
         try {
             if(currentSubjectFolder === "demo") throw new Error("Demo");
             const promises = selectedFiles.map(f => fetch(`data/${currentSubjectFolder}/${f}`).then(r => r.json()));
             const results = await Promise.all(promises);
             results.forEach(d => allQuestions = allQuestions.concat(d));
         } catch(e) {
-            // Generate Demo Questions
             for(let i=0; i<50; i++) allQuestions.push({
-                question: `This is demo question #${i+1}. The answer is 'Correct'.`,
-                options: ["Wrong One", "Correct", "Another Wrong", "Totally Wrong"],
+                question: `Demo Question ${i+1}. The answer is Correct.`,
+                options: ["Option A", "Option B", "Correct", "Option D"],
                 correct: "Correct",
-                explanation: "This is a demo explanation."
+                explanation: "Demo explanation."
             });
         }
 
         if(allQuestions.length === 0) throw new Error("No questions");
 
-        // Shuffle Questions
         for (let i = allQuestions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
         }
-        
-        // Slice to requested amount
         currentExamQuestions = allQuestions.slice(0, count);
 
         initExamState();
@@ -164,12 +154,9 @@ async function startExam() {
 
 function initExamState() {
     userAnswers = new Array(currentExamQuestions.length).fill(null);
-    
-    // Initialize Queue: [0, 1, 2, ... total-1]
     questionQueue = Array.from({length: currentExamQuestions.length}, (_, i) => i);
     queuePosition = 0;
-
-    totalTimeSeconds = currentExamQuestions.length * 60; // 1 min per q
+    totalTimeSeconds = currentExamQuestions.length * 60;
     timeRemaining = totalTimeSeconds;
 
     setupSection.classList.add('hidden');
@@ -182,27 +169,22 @@ function initExamState() {
 // --- NAVIGATION & DISPLAY ---
 function loadQuestion(rawIndex) {
     const qData = currentExamQuestions[rawIndex];
-    
-    currentQNum.textContent = rawIndex + 1; // Show actual ID
+    currentQNum.textContent = rawIndex + 1;
     questionText.innerHTML = qData.question;
     optionsContainer.innerHTML = '';
 
-    // Prev Button
     prevBtn.disabled = queuePosition === 0;
 
-    // Next Button Logic
-    // If we are at the end of the queue AND the current question is answered: Show Finish
-    // Otherwise show Next (which might skip)
+    // Logic: If at end of queue AND answered, change Next text to Finish, else Normal Next
     if (queuePosition === questionQueue.length - 1 && userAnswers[rawIndex] !== null) {
-        setNextBtnToFinish();
+        nextBtn.innerHTML = 'Finish <i class="ph-bold ph-check"></i>';
+        nextBtn.onclick = () => finishBtnMain.click();
     } else {
         nextBtn.innerHTML = 'Next <i class="ph-bold ph-caret-right"></i>';
         nextBtn.onclick = handleNextClick;
     }
 
-    // Options
     let opts = [...qData.options];
-    // Randomize option order
     opts.sort(() => Math.random() - 0.5);
 
     opts.forEach(opt => {
@@ -229,27 +211,21 @@ function selectOption(btn, text, qData, rawIndex) {
         isCorrect: text === qData.correct
     };
 
-    // If we just answered the last item in the queue, enable finish
     if (queuePosition === questionQueue.length - 1) {
-        setNextBtnToFinish();
+        nextBtn.innerHTML = 'Finish <i class="ph-bold ph-check"></i>';
+        nextBtn.onclick = () => finishBtnMain.click();
     }
 }
 
 function handleNextClick() {
     const currentRawIndex = questionQueue[queuePosition];
-
-    // QUEUE LOGIC:
-    // If user hasn't answered, push this question index to the end of the line
     if (userAnswers[currentRawIndex] === null) {
         questionQueue.push(currentRawIndex);
     }
-
     queuePosition++;
-
     if (queuePosition < questionQueue.length) {
         loadQuestion(questionQueue[queuePosition]);
     } else {
-        // Fallback if somehow queue exhausted
         finishExam();
     }
 }
@@ -260,11 +236,6 @@ prevBtn.addEventListener('click', () => {
         loadQuestion(questionQueue[queuePosition]);
     }
 });
-
-function setNextBtnToFinish() {
-    nextBtn.innerHTML = 'Finish <i class="ph-bold ph-check"></i>';
-    nextBtn.onclick = () => finishBtn.click();
-}
 
 // --- TIMER & FINISH ---
 function startTimer() {
@@ -282,16 +253,14 @@ function updateTimeUI() {
     timerDisplay.textContent = `${m}:${s}`;
     timerDisplayNav.textContent = `${m}:${s}`;
     
-    // Warning Color
     if(timeRemaining < 60) {
         timerDisplay.style.color = '#ef4444';
         document.getElementById('nav-timer').style.background = '#ef4444';
     }
 }
 
-if(finishBtnTop) finishBtnTop.addEventListener('click', () => finishBtn.click());
-
-finishBtn.addEventListener('click', () => {
+// Event Listener for the New Main Submit Button
+finishBtnMain.addEventListener('click', () => {
     const count = userAnswers.filter(a => a).length;
     if(confirm(`You have answered ${count} out of ${currentExamQuestions.length}. Submit Exam?`)) {
         finishExam();
@@ -314,13 +283,11 @@ function finishExam(auto) {
     document.getElementById('final-total').textContent = total;
     document.getElementById('percentage-text').textContent = `${perc}%`;
     
-    // Time Taken Calculation
     const taken = totalTimeSeconds - timeRemaining;
     const m = Math.floor(taken/60);
     const s = taken%60;
     document.getElementById('time-taken-text').textContent = `${m}m ${s}s`;
 
-    // Ring Animation
     const circle = document.getElementById('score-ring-stroke');
     const r = circle.r.baseVal.value;
     const c = r * 2 * Math.PI;
@@ -329,18 +296,17 @@ function finishExam(auto) {
     
     setTimeout(() => {
         circle.style.strokeDashoffset = c - (perc / 100) * c;
-        if(perc >= 70) circle.style.stroke = '#10b981'; // Green
-        else if(perc >= 40) circle.style.stroke = '#f59e0b'; // Orange
-        else circle.style.stroke = '#ef4444'; // Red
+        if(perc >= 70) circle.style.stroke = '#10b981';
+        else if(perc >= 40) circle.style.stroke = '#f59e0b';
+        else circle.style.stroke = '#ef4444';
     }, 100);
 
-    // Generate Review List
     const list = document.getElementById('review-list');
     list.innerHTML = '';
     currentExamQuestions.forEach((q, i) => {
         const ans = userAnswers[i];
         const isCorrect = ans && ans.isCorrect;
-        const statusClass = ans ? (isCorrect ? 'correct' : 'wrong') : 'wrong'; // Skipped counts as wrong usually
+        const statusClass = ans ? (isCorrect ? 'correct' : 'wrong') : 'wrong'; 
         
         const div = document.createElement('div');
         div.className = `review-item ${statusClass}`;

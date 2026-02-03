@@ -37,7 +37,6 @@
             </div>
 
             <div class="glass-card setup-form">
-                <!-- Subject Selection -->
                 <div class="input-group">
                     <label class="input-label"><i class="ph ph-books"></i> Subject</label>
                     <div class="select-wrapper">
@@ -48,13 +47,11 @@
                     </div>
                 </div>
 
-                <!-- Chapter Selection -->
                 <div class="input-group" id="chapter-group" style="display:none;">
                     <label class="input-label"><i class="ph ph-list-checks"></i> Chapters</label>
                     <div id="chapter-list" class="custom-checkbox-list"></div>
                 </div>
 
-                <!-- Question Count -->
                 <div class="input-group">
                     <label class="input-label"><i class="ph ph-question"></i> Number of Questions</label>
                     <div class="range-wrapper">
@@ -76,8 +73,6 @@
                     <div class="glass-card question-box">
                         <div class="q-meta">
                             <span class="badge badge-blue">Question <span id="current-q-num">1</span></span>
-                            <!-- This button is KEY for mobile users -->
-                            <button id="finish-btn-top" class="btn btn-sm-danger">End Exam</button>
                         </div>
                         
                         <div class="question-text" id="question-text">
@@ -87,25 +82,30 @@
                         <div class="options-grid" id="options-container">
                             <!-- Options load here -->
                         </div>
-                    </div>
 
-                    <!-- Bottom Nav (Sticky on Mobile) -->
-                    <div class="control-bar">
-                        <button id="prev-btn" class="btn btn-outline"><i class="ph-bold ph-caret-left"></i> Previous</button>
-                        <button id="next-btn" class="btn btn-primary">Next <i class="ph-bold ph-caret-right"></i></button>
+                        <!-- NAVIGATION BUTTONS -->
+                        <div class="control-bar">
+                            <button id="prev-btn" class="btn btn-outline"><i class="ph-bold ph-caret-left"></i> Previous</button>
+                            <button id="next-btn" class="btn btn-primary">Next <i class="ph-bold ph-caret-right"></i></button>
+                        </div>
+
+                        <!-- SUBMIT BUTTON (Below the Previous/Next line) -->
+                        <div class="submit-area">
+                            <div class="divider-line"></div>
+                            <button id="finish-btn-main" class="btn btn-danger btn-block">
+                                <i class="ph-bold ph-paper-plane-right"></i> Submit Exam
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right: Sidebar (Timer & Desktop Submit) -->
+                <!-- Right: Sidebar (Timer Only - Submit button removed from here to avoid duplication) -->
                 <div class="exam-sidebar">
                     <div class="glass-card palette-card" style="text-align: center;">
                         <div class="palette-header">
                             <div class="timer-float" id="timer-display">00:00</div>
                         </div>
-                        
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px; margin-top: 10px;">Time Remaining</p>
-
-                        <button id="finish-btn" class="btn btn-danger btn-block">Submit Exam</button>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0; margin-top: 10px;">Time Remaining</p>
                     </div>
                 </div>
             </div>
