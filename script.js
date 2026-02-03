@@ -135,10 +135,10 @@ async function startExam() {
         } catch(e) {
             // Generate Demo Questions
             for(let i=0; i<50; i++) allQuestions.push({
-                question: `This is demo question #${i+1} for testing UI behavior. What is 2 + 2?`,
-                options: ["3", "4", "5", "Fish"],
-                correct: "4",
-                explanation: "Because math."
+                question: `This is demo question #${i+1}. The answer is 'Correct'.`,
+                options: ["Wrong One", "Correct", "Another Wrong", "Totally Wrong"],
+                correct: "Correct",
+                explanation: "This is a demo explanation."
             });
         }
 
