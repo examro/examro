@@ -1,51 +1,48 @@
 // --- STATE MANAGEMENT ---
-let subjectList = [];       
+let subjectList = [];
 let currentSubjectFolder = "";
 let availableChapters = [];
 let currentExamQuestions = [];
-let userAnswers = []; 
-let currentQuestionIndex = 0;
+let userAnswers = [];
 
-// Timer Variables
+// Queue System for Questions
+let questionQueue = []; // Holds indices of questions to visit [0, 1, 2, ...]
+let queuePosition = 0;  // Current pointer in the queue
+
 let totalTimeSeconds = 0;
 let timeRemaining = 0;
 let timerInterval = null;
 
 // --- DOM ELEMENTS ---
-const setupSection = document.getElementById('setup-section');
-const examSection = document.getElementById('exam-section');
-const resultSection = document.getElementById('result-section');
-
 const subjectSelect = document.getElementById('subject-select');
 const chapterGroup = document.getElementById('chapter-group');
 const chapterList = document.getElementById('chapter-list');
 const startBtn = document.getElementById('start-btn');
 const qCountInput = document.getElementById('q-count-input');
 
+const setupSection = document.getElementById('setup-section');
+const examSection = document.getElementById('exam-section');
+const resultSection = document.getElementById('result-section');
+
 const questionText = document.getElementById('question-text');
 const optionsContainer = document.getElementById('options-container');
 const nextBtn = document.getElementById('next-btn');
 const prevBtn = document.getElementById('prev-btn');
 const finishBtn = document.getElementById('finish-btn');
-const finishBtnTop = document.getElementById('finish-btn-top'); // Added top button
+const finishBtnTop = document.getElementById('finish-btn-top');
 
 const currentQNum = document.getElementById('current-q-num');
-const totalQNum = document.getElementById('total-q-num');
+const totalQNum = document.getElementById('final-total'); 
 const timerDisplay = document.getElementById('timer-display');
-const timerDisplayNav = document.getElementById('timer-display-nav'); // Nav timer
-const navTimerBox = document.getElementById('nav-timer');
-const questionPalette = document.getElementById('question-palette');
+const timerDisplayNav = document.getElementById('timer-display-nav');
 
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadSubjectMenu();
-});
+document.addEventListener('DOMContentLoaded', loadSubjectMenu);
 
-// 1. Load the main list of subjects
 async function loadSubjectMenu() {
     try {
         const response = await fetch('data/subjects.json');
-        if (!response.ok) throw new Error("Could not load subject list");
+        if (!response.ok) throw new Error("No subject file");
         subjectList = await response.json();
         
         subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
@@ -56,51 +53,55 @@ async function loadSubjectMenu() {
             subjectSelect.appendChild(option);
         });
         subjectSelect.addEventListener('change', handleSubjectSelection);
-    } catch (error) {
-        console.error(error);
-        // Fallback for demo without server
-        alert("System loaded. Please ensure data/subjects.json exists.");
+    } catch (e) {
+        console.warn("Server mode not detected. Enabling Demo Mode.");
+        // Demo Data for testing without server
+        subjectList = [{name: "General Knowledge (Demo)", folder: "demo"}];
+        subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+        subjectSelect.appendChild(new Option("General Knowledge (Demo)", "demo"));
+        subjectSelect.addEventListener('change', handleSubjectSelection);
     }
 }
 
-// 2. When Subject is selected
 async function handleSubjectSelection() {
-    const folderName = subjectSelect.value;
+    const folder = subjectSelect.value;
     chapterList.innerHTML = '';
     chapterGroup.style.display = 'none';
     startBtn.disabled = true;
-    currentSubjectFolder = folderName;
-
-    if (!folderName) return;
+    currentSubjectFolder = folder;
+    
+    if(!folder) return;
 
     try {
-        const res = await fetch(`data/${folderName}/index.json`);
-        if (!res.ok) throw new Error(`Could not load chapters for ${folderName}`);
-        
+        const res = await fetch(`data/${folder}/index.json`);
         availableChapters = await res.json();
         generateChapterList();
-    } catch (error) {
-        console.error(error);
-        alert("Subject data loaded (Simulated).");
+    } catch (e) {
+        // Fallback for Demo
+        availableChapters = [
+            {file: "ch1.json", name: "Chapter 1: Basics"},
+            {file: "ch2.json", name: "Chapter 2: Advanced"}
+        ];
+        generateChapterList();
     }
 }
 
-// 3. Generate Checkboxes
 function generateChapterList() {
-    if(availableChapters.length === 0) {
-        chapterList.innerHTML = '<div style="padding:10px;">No chapters found.</div>';
-        return;
-    }
-
     availableChapters.forEach(chap => {
         const div = document.createElement('div');
         div.className = 'checkbox-item';
-        // Add ID to label for accessibility
-        const uniqueId = `ch-${chap.file}`;
         div.innerHTML = `
-            <input type="checkbox" id="${uniqueId}" value="${chap.file}" class="chapter-checkbox">
-            <label for="${uniqueId}">${chap.name}</label>
+            <input type="checkbox" id="ch-${chap.file}" value="${chap.file}" class="chapter-checkbox">
+            <label for="ch-${chap.file}">${chap.name}</label>
         `;
+        // Allow clicking row to toggle checkbox
+        div.addEventListener('click', (e) => {
+            if(e.target.tagName !== 'INPUT') {
+                const cb = div.querySelector('input');
+                cb.checked = !cb.checked;
+                cb.dispatchEvent(new Event('change'));
+            }
+        });
         chapterList.appendChild(div);
     });
     chapterGroup.style.display = 'block';
@@ -113,280 +114,249 @@ function generateChapterList() {
     });
 }
 
-// --- EXAM START LOGIC ---
+// --- START EXAM ---
 startBtn.addEventListener('click', startExam);
 
 async function startExam() {
     const selectedFiles = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value);
-
-    let requestedQCount = parseInt(qCountInput.value);
-    if(isNaN(requestedQCount) || requestedQCount < 1) requestedQCount = 20;
-    if(requestedQCount > 100) requestedQCount = 100;
+    let count = parseInt(qCountInput.value) || 20;
 
     startBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Loading...';
-    startBtn.disabled = true;
-
+    
     try {
         let allQuestions = [];
-
-        const promises = selectedFiles.map(filename => 
-            fetch(`data/${currentSubjectFolder}/${filename}`).then(res => {
-                if(!res.ok) throw new Error(`Failed`);
-                return res.json();
-            })
-        );
-
-        const results = await Promise.all(promises);
-        results.forEach(data => { allQuestions = allQuestions.concat(data); });
-
-        if (allQuestions.length === 0) {
-            alert("No questions found.");
-            resetStartBtn();
-            return;
+        
+        // Try fetching real data
+        try {
+            if(currentSubjectFolder === "demo") throw new Error("Demo");
+            const promises = selectedFiles.map(f => fetch(`data/${currentSubjectFolder}/${f}`).then(r => r.json()));
+            const results = await Promise.all(promises);
+            results.forEach(d => allQuestions = allQuestions.concat(d));
+        } catch(e) {
+            // Generate Demo Questions
+            for(let i=0; i<50; i++) allQuestions.push({
+                question: `This is demo question #${i+1} for testing UI behavior. What is 2 + 2?`,
+                options: ["3", "4", "5", "Fish"],
+                correct: "4",
+                explanation: "Because math."
+            });
         }
 
-        shuffleArray(allQuestions);
-        const finalLength = Math.min(allQuestions.length, requestedQCount);
-        currentExamQuestions = allQuestions.slice(0, finalLength); 
-        
-        setupExamState();
+        if(allQuestions.length === 0) throw new Error("No questions");
 
-    } catch (error) {
-        console.error(error);
-        // alert("Error loading files.");
-        resetStartBtn();
+        // Shuffle Questions
+        for (let i = allQuestions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+        }
+        
+        // Slice to requested amount
+        currentExamQuestions = allQuestions.slice(0, count);
+
+        initExamState();
+
+    } catch (e) {
+        alert("Error starting exam. Please check console.");
+        console.error(e);
+        startBtn.innerHTML = 'Start Exam <i class="ph-bold ph-arrow-right"></i>';
     }
 }
 
-function resetStartBtn() {
-    startBtn.innerHTML = 'Start Exam <i class="ph-bold ph-arrow-right"></i>';
-    startBtn.disabled = false;
-}
-
-function setupExamState() {
+function initExamState() {
     userAnswers = new Array(currentExamQuestions.length).fill(null);
-    currentQuestionIndex = 0;
     
-    totalTimeSeconds = currentExamQuestions.length * 60;
+    // Initialize Queue: [0, 1, 2, ... total-1]
+    questionQueue = Array.from({length: currentExamQuestions.length}, (_, i) => i);
+    queuePosition = 0;
+
+    totalTimeSeconds = currentExamQuestions.length * 60; // 1 min per q
     timeRemaining = totalTimeSeconds;
 
-    totalQNum.textContent = currentExamQuestions.length;
     setupSection.classList.add('hidden');
     examSection.classList.remove('hidden');
-    navTimerBox.style.display = 'flex'; // Show nav timer
     
-    generatePaletteButtons();
     startTimer();
-    loadQuestion(0);
+    loadQuestion(questionQueue[0]);
 }
 
-// --- TIMER LOGIC ---
-function startTimer() {
-    updateTimerDisplay();
-    timerInterval = setInterval(() => {
-        timeRemaining--;
-        updateTimerDisplay();
-        if (timeRemaining <= 0) {
-            clearInterval(timerInterval);
-            finishExam(true);
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay() {
-    const m = Math.floor(timeRemaining / 60);
-    const s = timeRemaining % 60;
-    const text = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+// --- NAVIGATION & DISPLAY ---
+function loadQuestion(rawIndex) {
+    const qData = currentExamQuestions[rawIndex];
     
-    timerDisplay.textContent = text;
-    timerDisplayNav.textContent = text;
-    
-    if(timeRemaining < 60) {
-        timerDisplay.style.color = '#ef4444'; 
-        navTimerBox.style.background = 'rgba(239, 68, 68, 0.2)';
-    }
-}
-
-// --- NAVIGATION ---
-function generatePaletteButtons() {
-    questionPalette.innerHTML = '';
-    currentExamQuestions.forEach((_, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'pal-btn';
-        btn.textContent = i + 1;
-        btn.onclick = () => loadQuestion(i);
-        btn.id = `pal-btn-${i}`;
-        questionPalette.appendChild(btn);
-    });
-}
-
-function updatePaletteUI() {
-    document.querySelectorAll('.pal-btn').forEach(b => b.classList.remove('current'));
-    const currentBtn = document.getElementById(`pal-btn-${currentQuestionIndex}`);
-    if(currentBtn) {
-        currentBtn.classList.add('current');
-        currentBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    userAnswers.forEach((ans, i) => {
-        const btn = document.getElementById(`pal-btn-${i}`);
-        if(ans !== null) btn.classList.add('answered');
-    });
-}
-
-function loadQuestion(index) {
-    currentQuestionIndex = index;
-    const qData = currentExamQuestions[index];
-    
-    currentQNum.textContent = index + 1;
+    currentQNum.textContent = rawIndex + 1; // Show actual ID
     questionText.innerHTML = qData.question;
     optionsContainer.innerHTML = '';
 
-    prevBtn.disabled = index === 0;
-    // Fix: Next button logic
-    if(index === currentExamQuestions.length - 1) {
-        nextBtn.innerHTML = 'Finish <i class="ph-bold ph-check"></i>';
-        nextBtn.onclick = () => finishBtn.click();
+    // Prev Button
+    prevBtn.disabled = queuePosition === 0;
+
+    // Next Button Logic
+    // If we are at the end of the queue AND the current question is answered: Show Finish
+    // Otherwise show Next (which might skip)
+    if (queuePosition === questionQueue.length - 1 && userAnswers[rawIndex] !== null) {
+        setNextBtnToFinish();
     } else {
         nextBtn.innerHTML = 'Next <i class="ph-bold ph-caret-right"></i>';
-        nextBtn.onclick = () => loadQuestion(currentQuestionIndex + 1);
+        nextBtn.onclick = handleNextClick;
     }
 
-    // Create Options
-    let options = [...qData.options];
-    shuffleArray(options); 
+    // Options
+    let opts = [...qData.options];
+    // Randomize option order
+    opts.sort(() => Math.random() - 0.5);
 
-    options.forEach(opt => {
+    opts.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.textContent = opt;
         
-        if (userAnswers[index] && userAnswers[index].selected === opt) {
+        if(userAnswers[rawIndex] && userAnswers[rawIndex].selected === opt) {
             btn.classList.add('selected');
         }
 
-        btn.onclick = () => selectOption(btn, opt, qData);
+        btn.onclick = () => selectOption(btn, opt, qData, rawIndex);
         optionsContainer.appendChild(btn);
     });
-
-    updatePaletteUI();
 }
 
-function selectOption(btn, selectedText, qData) {
+function selectOption(btn, text, qData, rawIndex) {
     document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     
-    userAnswers[currentQuestionIndex] = {
+    userAnswers[rawIndex] = {
         question: qData,
-        selected: selectedText,
-        isCorrect: selectedText === qData.correct
+        selected: text,
+        isCorrect: text === qData.correct
     };
 
-    updatePaletteUI();
+    // If we just answered the last item in the queue, enable finish
+    if (queuePosition === questionQueue.length - 1) {
+        setNextBtnToFinish();
+    }
 }
 
-// --- NAVIGATION HANDLERS ---
+function handleNextClick() {
+    const currentRawIndex = questionQueue[queuePosition];
+
+    // QUEUE LOGIC:
+    // If user hasn't answered, push this question index to the end of the line
+    if (userAnswers[currentRawIndex] === null) {
+        questionQueue.push(currentRawIndex);
+    }
+
+    queuePosition++;
+
+    if (queuePosition < questionQueue.length) {
+        loadQuestion(questionQueue[queuePosition]);
+    } else {
+        // Fallback if somehow queue exhausted
+        finishExam();
+    }
+}
+
 prevBtn.addEventListener('click', () => {
-    if (currentQuestionIndex > 0) loadQuestion(currentQuestionIndex - 1);
-});
-
-// Added top button support
-if(finishBtnTop) {
-    finishBtnTop.addEventListener('click', () => finishBtn.click());
-}
-
-finishBtn.addEventListener('click', () => {
-    const answeredCount = userAnswers.filter(a => a !== null).length;
-    if(confirm(`You answered ${answeredCount} of ${currentExamQuestions.length} questions.\nSubmit Exam?`)) {
-        finishExam(false);
+    if (queuePosition > 0) {
+        queuePosition--;
+        loadQuestion(questionQueue[queuePosition]);
     }
 });
 
-// --- RESULTS ---
-function finishExam(forced) {
-    clearInterval(timerInterval);
-    navTimerBox.style.display = 'none';
+function setNextBtnToFinish() {
+    nextBtn.innerHTML = 'Finish <i class="ph-bold ph-check"></i>';
+    nextBtn.onclick = () => finishBtn.click();
+}
+
+// --- TIMER & FINISH ---
+function startTimer() {
+    updateTimeUI();
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimeUI();
+        if(timeRemaining <= 0) finishExam(true);
+    }, 1000);
+}
+
+function updateTimeUI() {
+    const m = Math.floor(timeRemaining / 60).toString().padStart(2,'0');
+    const s = (timeRemaining % 60).toString().padStart(2,'0');
+    timerDisplay.textContent = `${m}:${s}`;
+    timerDisplayNav.textContent = `${m}:${s}`;
     
-    if(forced) alert("Time Up! Submitting automatically.");
+    // Warning Color
+    if(timeRemaining < 60) {
+        timerDisplay.style.color = '#ef4444';
+        document.getElementById('nav-timer').style.background = '#ef4444';
+    }
+}
+
+if(finishBtnTop) finishBtnTop.addEventListener('click', () => finishBtn.click());
+
+finishBtn.addEventListener('click', () => {
+    const count = userAnswers.filter(a => a).length;
+    if(confirm(`You have answered ${count} out of ${currentExamQuestions.length}. Submit Exam?`)) {
+        finishExam();
+    }
+});
+
+function finishExam(auto) {
+    clearInterval(timerInterval);
+    if(auto) alert("Time Up! Submitting automatically.");
 
     examSection.classList.add('hidden');
     resultSection.classList.remove('hidden');
 
-    const validAnswers = userAnswers.filter(a => a !== null);
-    const score = validAnswers.filter(a => a.isCorrect).length;
+    const valid = userAnswers.filter(a => a !== null);
+    const score = valid.filter(a => a.isCorrect).length;
     const total = currentExamQuestions.length;
-    const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
-    const timeTaken = totalTimeSeconds - timeRemaining;
-
-    const m = Math.floor(timeTaken / 60);
-    const s = timeTaken % 60;
+    const perc = total ? Math.round((score/total)*100) : 0;
 
     document.getElementById('score-text').textContent = score;
     document.getElementById('final-total').textContent = total;
-    document.getElementById('percentage-text').textContent = `${percentage}%`;
+    document.getElementById('percentage-text').textContent = `${perc}%`;
+    
+    // Time Taken Calculation
+    const taken = totalTimeSeconds - timeRemaining;
+    const m = Math.floor(taken/60);
+    const s = taken%60;
     document.getElementById('time-taken-text').textContent = `${m}m ${s}s`;
 
-    // Circular Progress Animation
+    // Ring Animation
     const circle = document.getElementById('score-ring-stroke');
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI;
+    const r = circle.r.baseVal.value;
+    const c = r * 2 * Math.PI;
+    circle.style.strokeDasharray = `${c} ${c}`;
+    circle.style.strokeDashoffset = c;
     
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    circle.style.strokeDashoffset = circumference;
-
-    const offset = circumference - (percentage / 100) * circumference;
-    // Small delay to allow CSS transition
     setTimeout(() => {
-        circle.style.strokeDashoffset = offset;
-        // Color coding ring
-        if(percentage < 40) circle.style.stroke = 'var(--error)';
-        else if(percentage < 70) circle.style.stroke = 'var(--warning)';
-        else circle.style.stroke = 'var(--success)';
+        circle.style.strokeDashoffset = c - (perc / 100) * c;
+        if(perc >= 70) circle.style.stroke = '#10b981'; // Green
+        else if(perc >= 40) circle.style.stroke = '#f59e0b'; // Orange
+        else circle.style.stroke = '#ef4444'; // Red
     }, 100);
 
-    renderReview();
-}
-
-function renderReview() {
+    // Generate Review List
     const list = document.getElementById('review-list');
     list.innerHTML = '';
-
     currentExamQuestions.forEach((q, i) => {
-        const answerData = userAnswers[i];
-        const isAnswered = answerData !== null;
-        const isCorrect = isAnswered ? answerData.isCorrect : false;
+        const ans = userAnswers[i];
+        const isCorrect = ans && ans.isCorrect;
+        const statusClass = ans ? (isCorrect ? 'correct' : 'wrong') : 'wrong'; // Skipped counts as wrong usually
         
-        const item = document.createElement('div');
-        item.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+        const div = document.createElement('div');
+        div.className = `review-item ${statusClass}`;
+        
+        let userAnsText = ans ? ans.selected : 'Skipped';
+        let userAnsClass = ans ? (isCorrect ? 'text-success' : 'text-danger') : 'text-danger';
 
-        let statusBadge = isCorrect 
-            ? '<span class="badge badge-correct">Correct</span>' 
-            : '<span class="badge badge-wrong">Wrong</span>';
-
-        if (!isAnswered) statusBadge = '<span class="badge badge-skipped">Skipped</span>';
-
-        item.innerHTML = `
-            <div class="review-q">${i + 1}. ${q.question} ${statusBadge}</div>
+        div.innerHTML = `
+            <div class="review-q">${i+1}. ${q.question}</div>
             <div class="review-ans">
-                <strong>You:</strong> 
-                <span class="${isCorrect ? 'text-success' : 'text-danger'}">
-                    ${isAnswered ? answerData.selected : 'No Answer'}
-                </span>
+                You: <span class="${userAnsClass}">${userAnsText}</span>
             </div>
             <div class="review-ans text-success">
-                <strong>Answer:</strong> ${q.correct}
-            </div>
-            <div class="review-exp" style="margin-top:10px; font-size:0.9rem; color:#666;">
-                <strong><i class="ph-bold ph-info"></i> Note:</strong> ${q.explanation || 'No explanation available.'}
+                Correct: ${q.correct}
             </div>
         `;
-        list.appendChild(item);
+        list.appendChild(div);
     });
-}
-
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
 }
