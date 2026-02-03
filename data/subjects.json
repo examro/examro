@@ -1,0 +1,10 @@
+[
+  { 
+    "name": "Chemistry (রসায়ন)", 
+    "folder": "chemistry" 
+  },
+  { 
+    "name": "ICT (তথ্য ও যোগাযোগ প্রযুক্তি)", 
+    "folder": "ict" 
+  }
+]
