@@ -2,5 +2,9 @@
   { 
     "name": "Short Syllabus (সংক্ষিপ্ত সিলেবাস)", 
     "file": "bangla2nd.json" 
+  },
+  {
+    "name": "Top 500 mcq", 
+    "file": "top500.json" 
   }
 ]
