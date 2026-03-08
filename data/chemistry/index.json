@@ -2,5 +2,13 @@
   { 
     "name": "অধ্যায় ১: রসায়নের ধারণা", 
     "file": "chapter1.json" 
+  },
+  { 
+    "name": "অধ্যায় ৩: পদার্থের গঠন", 
+    "file": "chapter3.json" 
+  },
+  { 
+    "name": "অধ্যায় ৪: পর্যায় সারণি", 
+    "file": "chapter4.json" 
   }
 ]
