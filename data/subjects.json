@@ -6,5 +6,10 @@
   { 
     "name": "ICT (তথ্য ও যোগাযোগ প্রযুক্তি)", 
     "folder": "ict" 
+  },
+  { 
+    "name": "Bangla 2nd (বাংলা ২য় পত্র)", 
+    "folder": "bangla" 
   }
+  
 ]
