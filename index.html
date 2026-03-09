@@ -4,108 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Examro | Smart Prep System</title>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
-    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Background Decoration -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
 
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="logo">
-            <i class="ph-fill ph-graduation-cap"></i> Examro
+            <div class="logo-icon"><i class="ph-fill ph-atom"></i></div>
+            <span class="logo-text">Exam<em>ro</em></span>
         </div>
-        <!-- Timer (Visible ONLY on mobile) -->
         <div class="nav-status" id="nav-timer" style="display:none;">
-            <i class="ph ph-clock"></i> <span id="timer-display-nav">00:00</span>
+            <i class="ph ph-clock"></i>
+            <span id="timer-display-nav">00:00</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-badge" id="nav-category-badge">Smart Prep</span>
         </div>
     </nav>
 
     <div class="main-container">
-        
-        <!-- SECTION 1: SETUP -->
-        <section id="setup-section" class="fade-in">
-            <div class="glass-card welcome-header">
-                <h2>Ready to practice?</h2>
-                <p>Select your subject to begin.</p>
+
+        <!-- SECTION 0: CATEGORY -->
+        <section id="category-section" class="fade-in">
+            <div class="hero-block">
+                <div class="hero-label"><i class="ph ph-graduation-cap"></i> Choose Your Class</div>
+                <h1>Who are you <span class="gradient-text">preparing</span> for?</h1>
+                <p>Select your exam category to get a personalized practice session.</p>
             </div>
 
-            <div class="glass-card setup-form">
-                <div class="input-group">
-                    <label class="input-label"><i class="ph ph-books"></i> Subject</label>
-                    <div class="select-wrapper">
-                        <select id="subject-select">
-                            <option value="">Select a Subject...</option>
-                        </select>
-                        <i class="ph ph-caret-down select-icon"></i>
-                    </div>
+            <div class="category-grid">
+                <div class="category-card available-card" onclick="selectCategory('ssc')">
+                    <div class="cat-glow"></div>
+                    <div class="cat-icon"><i class="ph-fill ph-book-open-text"></i></div>
+                    <div class="cat-title">SSC</div>
+                    <div class="cat-sub">Secondary School Certificate</div>
+                    <div class="cat-badge badge-available"><i class="ph ph-check-circle"></i> Available</div>
                 </div>
-
-                <div class="input-group" id="chapter-group" style="display:none;">
-                    <label class="input-label"><i class="ph ph-list-checks"></i> Chapters</label>
-                    <div id="chapter-list" class="custom-checkbox-list"></div>
+                <div class="category-card locked-card" onclick="selectCategory('hsc')">
+                    <div class="cat-icon"><i class="ph-fill ph-student"></i></div>
+                    <div class="cat-title">HSC</div>
+                    <div class="cat-sub">Higher Secondary Certificate</div>
+                    <div class="cat-badge badge-soon"><i class="ph ph-clock"></i> Coming Soon</div>
                 </div>
-
-                <div class="input-group">
-                    <label class="input-label"><i class="ph ph-question"></i> Number of Questions</label>
-                    <div class="range-wrapper">
-                        <input type="number" id="q-count-input" class="modern-input" value="20" min="5" max="100">
-                    </div>
+                <div class="category-card locked-card" onclick="selectCategory('medical')">
+                    <div class="cat-icon"><i class="ph-fill ph-heartbeat"></i></div>
+                    <div class="cat-title">Medical Admission</div>
+                    <div class="cat-sub">MBBS Entry Preparation</div>
+                    <div class="cat-badge badge-soon"><i class="ph ph-clock"></i> Coming Soon</div>
                 </div>
+                <div class="category-card locked-card" onclick="selectCategory('university')">
+                    <div class="cat-icon"><i class="ph-fill ph-buildings"></i></div>
+                    <div class="cat-title">University Admission</div>
+                    <div class="cat-sub">Public University Prep</div>
+                    <div class="cat-badge badge-soon"><i class="ph ph-clock"></i> Coming Soon</div>
+                </div>
+            </div>
+        </section>
 
-                <button id="start-btn" class="btn btn-primary btn-lg btn-block" disabled>
-                    Start Exam <i class="ph-bold ph-arrow-right"></i>
+        <!-- SECTION 1: SETUP -->
+        <section id="setup-section" class="hidden fade-in">
+            <div class="back-row">
+                <button class="btn-back" onclick="goBack()">
+                    <i class="ph-bold ph-arrow-left"></i> Back
                 </button>
+                <div class="breadcrumb">
+                    <span class="bc-item" onclick="goBack()">Categories</span>
+                    <i class="ph ph-caret-right"></i>
+                    <span class="bc-item bc-active" id="bc-category">SSC</span>
+                </div>
+            </div>
+
+            <div class="hero-block" style="margin-bottom: 28px;">
+                <div class="hero-label" id="setup-label"><i class="ph ph-sparkle"></i> SSC Preparation</div>
+                <h1>Ready to <span class="gradient-text">Master</span> Your Exam?</h1>
+                <p>Select your subject, choose chapters, and begin your practice session.</p>
+            </div>
+
+            <div class="setup-card">
+                <div class="setup-card-inner">
+                    <div class="field-group">
+                        <label class="field-label"><i class="ph ph-books"></i> Subject</label>
+                        <div class="select-wrapper">
+                            <select id="subject-select">
+                                <option value="">Choose a subject...</option>
+                            </select>
+                            <i class="ph ph-caret-down select-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="field-group" id="chapter-group" style="display:none;">
+                        <label class="field-label"><i class="ph ph-list-checks"></i> Chapters</label>
+                        <div id="chapter-list" class="chapter-grid"></div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label"><i class="ph ph-hash"></i> Number of Questions</label>
+                        <div class="number-input-row">
+                            <button class="num-adj" onclick="adjustCount(-5)">−5</button>
+                            <input type="number" id="q-count-input" class="number-input" value="20" min="5" max="100">
+                            <button class="num-adj" onclick="adjustCount(5)">+5</button>
+                        </div>
+                    </div>
+                    <button id="start-btn" class="btn-start" disabled>
+                        <span>Begin Exam</span>
+                        <div class="btn-arrow"><i class="ph-bold ph-arrow-right"></i></div>
+                    </button>
+                </div>
+                <div class="setup-stats">
+                    <div class="stat-item"><i class="ph ph-lightning"></i><span>Instant Results</span></div>
+                    <div class="stat-item"><i class="ph ph-timer"></i><span>Timed Sessions</span></div>
+                    <div class="stat-item"><i class="ph ph-chart-line-up"></i><span>Detailed Analysis</span></div>
+                </div>
             </div>
         </section>
 
         <!-- SECTION 2: EXAM -->
         <section id="exam-section" class="hidden fade-in">
             <div class="exam-layout">
-                <!-- Left: Question Area -->
                 <div class="exam-main">
-                    <div class="glass-card question-box">
-                        <div class="q-meta">
-                            <span class="badge badge-blue">Question <span id="current-q-num">1</span></span>
+                    <div class="question-card">
+                        <div class="question-header">
+                            <div class="q-badge">
+                                <span class="q-label">Question</span>
+                                <span class="q-number" id="current-q-num">1</span>
+                            </div>
+                            <div class="q-progress-dots" id="q-progress-dots"></div>
                         </div>
-                        
-                        <div class="question-text" id="question-text">
-                            <!-- Question loads here -->
+                        <div class="question-text" id="question-text"></div>
+                        <div class="options-list" id="options-container"></div>
+                        <div class="nav-controls">
+                            <button id="prev-btn" class="btn-nav btn-prev">
+                                <i class="ph-bold ph-caret-left"></i> Previous
+                            </button>
+                            <button id="next-btn" class="btn-nav btn-next">
+                                Next <i class="ph-bold ph-caret-right"></i>
+                            </button>
                         </div>
-
-                        <div class="options-grid" id="options-container">
-                            <!-- Options load here -->
-                        </div>
-
-                        <!-- NAVIGATION BUTTONS -->
-                        <div class="control-bar">
-                            <button id="prev-btn" class="btn btn-outline"><i class="ph-bold ph-caret-left"></i> Previous</button>
-                            <button id="next-btn" class="btn btn-primary">Next <i class="ph-bold ph-caret-right"></i></button>
-                        </div>
-
-                        <!-- SUBMIT BUTTON (Below the Previous/Next line) -->
-                        <div class="submit-area">
-                            <div class="divider-line"></div>
-                            <button id="finish-btn-main" class="btn btn-danger btn-block">
+                        <div class="submit-zone">
+                            <div class="submit-divider"><span>or</span></div>
+                            <button id="finish-btn-main" class="btn-submit">
                                 <i class="ph-bold ph-paper-plane-right"></i> Submit Exam
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Right: Sidebar (Timer Only - Submit button removed from here to avoid duplication) -->
                 <div class="exam-sidebar">
-                    <div class="glass-card palette-card" style="text-align: center;">
-                        <div class="palette-header">
-                            <div class="timer-float" id="timer-display">00:00</div>
+                    <div class="timer-card">
+                        <div class="timer-label">Time Remaining</div>
+                        <div class="timer-display" id="timer-display">00:00</div>
+                        <div class="timer-ring-wrap">
+                            <svg class="timer-ring" viewBox="0 0 80 80">
+                                <circle class="ring-bg" cx="40" cy="40" r="34"/>
+                                <circle class="ring-fill" id="timer-ring-fill" cx="40" cy="40" r="34"/>
+                            </svg>
                         </div>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 0; margin-top: 10px;">Time Remaining</p>
+                    </div>
+                    <div class="sidebar-hint">
+                        <i class="ph ph-info"></i>
+                        Unanswered questions are re-queued automatically.
                     </div>
                 </div>
             </div>
@@ -113,44 +176,64 @@
 
         <!-- SECTION 3: RESULTS -->
         <section id="result-section" class="hidden fade-in">
-            <div class="glass-card result-card">
-                <div class="result-header">
-                    <div class="score-ring-container">
-                        <svg class="progress-ring" width="120" height="120">
-                            <circle class="progress-ring__circle" stroke="#e2e8f0" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
-                            <circle id="score-ring-stroke" class="progress-ring__circle stroke-anim" stroke="#4f46e5" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
-                        </svg>
-                        <div class="score-text">
-                            <span id="percentage-text">0%</span>
-                        </div>
-                    </div>
-                    <div class="result-details">
-                        <h2>Great Effort!</h2>
-                        <p>You scored <strong id="score-text" class="text-primary">0</strong> out of <span id="final-total">0</span></p>
-                        <div class="stat-badge">
-                            <i class="ph ph-timer"></i> <span id="time-taken-text">00:00</span>
-                        </div>
+            <div class="result-hero">
+                <div class="score-ring-wrap">
+                    <svg class="progress-ring" width="140" height="140">
+                        <circle class="progress-ring__circle" stroke-width="10" fill="transparent" r="60" cx="70" cy="70"/>
+                        <circle id="score-ring-stroke" class="progress-ring__circle stroke-anim" stroke="#10b981" stroke-width="10" fill="transparent" r="60" cx="70" cy="70"/>
+                    </svg>
+                    <div class="score-center">
+                        <span id="percentage-text" class="score-percent">0%</span>
+                        <span class="score-label">Score</span>
                     </div>
                 </div>
-                
-                <div class="action-buttons">
-                    <button onclick="location.reload()" class="btn btn-primary"><i class="ph-bold ph-arrows-clockwise"></i> New Exam</button>
+                <div class="result-info">
+                    <h2 class="result-title">Exam Complete!</h2>
+                    <p class="result-sub">You scored <strong id="score-text">0</strong> out of <strong id="final-total">0</strong> correctly</p>
+                    <div class="result-meta-row">
+                        <div class="result-meta-pill"><i class="ph ph-timer"></i><span id="time-taken-text">0m 0s</span></div>
+                    </div>
+                    <div class="result-actions">
+                        <button onclick="location.reload()" class="btn-retry">
+                            <i class="ph-bold ph-arrows-clockwise"></i> New Exam
+                        </button>
+                        <button onclick="location.reload()" class="btn-category">
+                            <i class="ph-bold ph-squares-four"></i> Categories
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            <div class="review-section">
-                <h3><i class="ph ph-list-magnifying-glass"></i> Detailed Analysis</h3>
-                <div id="review-list" class="review-container"></div>
+            <div class="analysis-section">
+                <div class="analysis-header">
+                    <i class="ph ph-list-magnifying-glass"></i>
+                    <h3>Detailed Analysis</h3>
+                </div>
+                <div id="review-list" class="review-list"></div>
             </div>
         </section>
 
     </div>
 
-    <!-- FOOTER CREDIT -->
-    <footer class="footer-credit">
-        Developed by Mubarok Hossen Kamil with <span class="heart-beat">❤️</span> For all students
+    <footer class="site-footer">
+        <span>Developed by <strong>Mubarok Hossen Kamil</strong> with <span class="heart">❤️</span> for all students</span>
     </footer>
 
+    <script>
+        function adjustCount(delta) {
+            const input = document.getElementById('q-count-input');
+            let val = parseInt(input.value) + delta;
+            val = Math.max(5, Math.min(100, val));
+            input.value = val;
+        }
+        function goBack() {
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('subject-select').value = '';
+            document.getElementById('chapter-group').style.display = 'none';
+            document.getElementById('chapter-list').innerHTML = '';
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('category-section').classList.remove('hidden');
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
